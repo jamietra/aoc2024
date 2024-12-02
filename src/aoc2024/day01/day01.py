@@ -2,13 +2,13 @@ import itertools
 from copy import copy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, List, Protocol, Tuple
+from typing import Callable, Protocol
 
 RowOperator = Callable[[int, int], int]
-ColumnOperator = Callable[[List[int], List[int]], List[int]]
-Aggregator = Callable[[List[int]], int]
-Rows = List[Tuple[int, int]]
-Columns = Tuple[List[int], List[int]]
+ColumnOperator = Callable[[list[int], list[int]], list[int]]
+Aggregator = Callable[[list[int]], int]
+Rows = list[tuple[int, int]]
+Columns = tuple[list[int], list[int]]
 
 
 class Day1Problem(Protocol):
@@ -36,7 +36,7 @@ class ColumnWiseProblem:
         return column_wise_aggregation(read_sorted_day1_columns(self.data_path), self.column_operator, self.aggregator)
 
 
-def read_day1_lines(data_path: Path) -> List[str]:
+def read_day1_lines(data_path: Path) -> list[str]:
     """
     Strip and split input file into lines.
     """
@@ -78,14 +78,14 @@ def distance_row_operator(left_value: int, right_value: int) -> int:
     return abs(left_value - right_value)
 
 
-def sum_aggregator(values: List[int]) -> int:
+def sum_aggregator(values: list[int]) -> int:
     """
     Sum implementation of the `Aggregator` callable type
     """
     return sum(values)
 
 
-def occurrence_counting_column_operator(left_col: List[int], right_col: List[int]) -> List[int]:
+def occurrence_counting_column_operator(left_col: list[int], right_col: list[int]) -> list[int]:
     """
     Take unique values from `left_col` and get a list of each value multiplied by how many times it occurs in `left_col`
     and by how many times it is in `right_col`.
@@ -99,7 +99,7 @@ def occurrence_counting_column_operator(left_col: List[int], right_col: List[int
     return per_value_products
 
 
-def get_occurrence_counts(column: List[int]) -> Dict[int, int]:
+def get_occurrence_counts(column: list[int]) -> dict[int, int]:
     """
     Get a mapping of each unique value in `column` to the number of times it occurs
     """
