@@ -13,6 +13,10 @@ def read_input(path: Path) -> list[str]:
 
 @dataclass
 class WordSearch:
+    """
+    Probably should've just made diagonal/transpose/reverse accessors instead of doing this adhoc serch stuff...
+    """
+
     matrix: list[str]
 
     rows: int = field(init=False)
@@ -26,6 +30,9 @@ class WordSearch:
         return self.matrix[row][col]
 
     def locations(self, character: str) -> list[tuple[int, int]]:
+        """
+        Get all coordinates of given character
+        """
         locations = []
         for line_no, line in enumerate(self.matrix):
             for col_no, char in enumerate(line):
@@ -34,11 +41,18 @@ class WordSearch:
         return locations
 
     def _get_directions(self, start: tuple[int, int], next_: tuple[int, int]) -> tuple[int, int]:
+        """
+        helper to get a tuple of direction given two points
+        """
         r_start, c_start = start
         r_next, c_next = next_
         return r_next - r_start, c_next - c_start
 
     def count_word_occurences(self, word: str) -> int:
+        """
+        Search the word search and count
+        """
+        # Maybe add functionality for getting tuples
         start_locations = self.locations(word[0])
         found_count = 0
         start_to_directions: DefaultDict[tuple[int, int], list[tuple[int, int]]] = defaultdict(list)
@@ -54,7 +68,44 @@ class WordSearch:
             found_count += len([w for w in possible_words if w == word])
         return found_count
 
+    def get_crossword_centroids(self, word: str) -> list[tuple[int, int]]:
+        """
+        Find all "cross" words (or is it X words...) of the given word and return a list of their centroids
+        """
+        word = word.upper()
+        if len(word) % 2 != 1 or len(word) < 3:
+            raise ValueError("len of word must be an odd number greater than 3")
+
+        middle_point = len(word) // 2
+        middle_letter = word[middle_point]
+        first_half = word[:middle_point]
+        second_half = word[(middle_point + 1) :]
+        other_letters = first_half + second_half
+        reversed_others = other_letters[::-1]
+        centers = self.locations(middle_letter)
+        cross_centers = []
+        for row, col in centers:
+            neighbours = itertools.takewhile(
+                lambda coord: not self.is_out_of_bounds(*coord) and (self.get(*coord) in other_letters),
+                self.get_all_diagonals(row, col),
+            )
+            if len(list(neighbours)) < 2 * len(other_letters):
+                continue
+            down_diag = "".join(
+                [self.get(row + r_offset, col + c_offset) for (r_offset, c_offset) in [(1, 1), (-1, -1)]]
+            )
+            if down_diag not in [other_letters, reversed_others]:
+                continue
+            up_diag = "".join([self.get(row + r_offset, col + c_offset) for (r_offset, c_offset) in [(-1, 1), (1, -1)]])
+            if up_diag not in [other_letters, reversed_others]:
+                continue
+            cross_centers.append((row, col))
+        return cross_centers
+
     def _get_sequence_from_direction(self, start: tuple[int, int], direction: tuple[int, int], length: int) -> str:
+        """
+        Given a start, direction, and length return that string
+        """
         r_start, c_start = start
         r_direction, c_direction = direction
         r_range = [r_start] if r_direction == 0 else range(r_start, r_start + r_direction * length, r_direction)
@@ -71,11 +122,17 @@ class WordSearch:
         )
 
     def _get_range(self, start: int, max_val: int) -> Iterable[int]:
+        """
+        helper to get a boundary aware range
+        """
         return range(max(start - 1, 0), min(start + 2, max_val))
 
     def locations_from_neighbours(
         self, start: tuple[int, int], character: str
     ) -> Generator[tuple[int, int], Any, None]:
+        """
+        Get coordinates of letters adjacent to `start` and return a list of their coordinates
+        """
         row, col = start
 
         row_range = self._get_range(row, self.rows)
@@ -86,51 +143,22 @@ class WordSearch:
     def is_out_of_bounds(self, row: int, col: int) -> bool:
         return row < 0 or col < 0 or row >= self.rows or col >= self.cols
 
+    def get_all_diagonals(self, row: int, col: int) -> Generator[tuple[int, int], Any, None]:
+        """
+        This is called in the crossword finder so that it can early exit using takewhile
+        """
+        return (coord for coord in itertools.product((row - 1, row + 1), (col - 1, col + 1)))
+
     def get_valid_diagonals(self, row: int, col: int) -> Generator[tuple[int, int], Any, None]:
-        return (
-            coord
-            for coord in itertools.product((row - 1, row + 1), (col - 1, col + 1))
-            if not self.is_out_of_bounds(*coord)
-        )
+        return (coord for coord in self.get_all_diagonals(row, col) if not self.is_out_of_bounds(*coord))
 
 
 def main() -> None:
     words = read_input(Path("data/input04.txt"))
-
     puzzle = WordSearch(words)
     print(puzzle.count_word_occurences("XMAS"))
-    a_locations = puzzle.locations("A")
-    first_pass = []
-    for row_loc, col_loc in a_locations:
-        diagonals = itertools.product((row_loc - 1, row_loc + 1), (col_loc - 1, col_loc + 1))
-        for new_row, new_col in diagonals:
-            if puzzle.is_out_of_bounds(new_row, new_col):
-                break
-            if puzzle.get(new_row, new_col) not in "MS":
-                break
-        else:
-            first_pass.append((row_loc, col_loc))
-    second_pass = []
-    for row, col in first_pass:
-        first_diag = "".join(
-            [puzzle.get(row + r_offset, col + c_offset) for (r_offset, c_offset) in [(-1, 1), (1, -1)]]
-        )
-        second_diag = "".join(
-            [puzzle.get(row + r_offset, col + c_offset) for (r_offset, c_offset) in [(1, 1), (-1, -1)]]
-        )
-        if first_diag not in [
-            "SM",
-            "MS",
-        ]:
-            continue
-        elif second_diag not in [
-            "SM",
-            "MS",
-        ]:
-            continue
-        else:
-            second_pass.append((row, col))
-    print(len(second_pass))
+    new_crosses = puzzle.get_crossword_centroids("MAS")
+    print(len(new_crosses))
 
 
 if __name__ == "__main__":
