@@ -25,6 +25,7 @@ repos:
     rev: 'v1.13.0'  # Use the sha / tag you want to point at
     hooks:
       - id: mypy
+        additional_dependencies: [types-tqdm==4.67.0.20241119, joblib-stubs==1.4.2.5.20240918]
         args: [--strict, --ignore-missing-imports]
 
   - repo: https://github.com/pycqa/flake8
