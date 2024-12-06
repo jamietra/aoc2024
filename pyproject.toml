@@ -7,6 +7,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.13"
+joblib = "^1.4.2"
+tqdm = "^4.67.1"
+types-tqdm = "^4.67.0.20241119"
+joblib-stubs = "^1.4.2.5.20240918"
 
 
 [tool.poetry.group.dev.dependencies]
