@@ -1,9 +1,8 @@
-from collections import OrderedDict, defaultdict
 import functools
 import math
+from collections import OrderedDict, defaultdict
 from pathlib import Path
-
-from tqdm import tqdm
+from queue import PriorityQueue
 
 type MazeNode = tuple[int, int, str]
 
@@ -36,7 +35,7 @@ def find_node_locations(lines: list[list[str]]) -> tuple[list[MazeNode], list[Ma
 
 
 def create_distance_dict(locations: list[MazeNode]) -> OrderedDict[MazeNode, float]:
-    distances = OrderedDict({l: math.inf for l in locations})
+    distances = OrderedDict({node: math.inf for node in locations})
     distances[locations[0]] = 0
     return sort_distance_dict(distances)
 
@@ -52,17 +51,14 @@ def dijkstra(
     Run Dijkstra's algorithm to create a distance mapping and previous mapping to reconstruct paths to end
     """
     unvisited_set = set(distances.keys())
-    # unvisited = PriorityQueue()
-    unvisited = list(unvisited_set)
-    # for node, dist in tqdm(distances.items()):
-    #     unvisited.put((dist, node))
+    unvisited: PriorityQueue[tuple[float, MazeNode]] = PriorityQueue()
+    for node, dist in distances.items():
+        unvisited.put((dist, node))
     previous: defaultdict[MazeNode, set[MazeNode]] = defaultdict(set)
-    # How to progress bar in while loop, a smarter person would put the worstcase dykstra here but that ain't me
-    for _ in tqdm(range(2 * len(distances))):
+    while True:
         if not unvisited_set:
             return sort_distance_dict(distances), previous
-        # _, current_node = unvisited.get()
-        current_node = unvisited.pop()
+        _, current_node = unvisited.get()
         # Hack to deal with this priority queue not having an update method. If it's priority has been updated with
         # alt_distance it will show up before the old entry in the queue and get removed from unvisited set, so we can
         # skip safely skip and not worry about updating
@@ -79,10 +75,9 @@ def dijkstra(
                 distances[node] = min(distances[node], alt_distance)
                 if alt_distance < current_distance:
                     previous[node] = {current_node}
-                    # unvisited.put((alt_distance, node))
+                    unvisited.put((alt_distance, node))
                 else:
                     previous[node].add(current_node)
-        unvisited = sorted(unvisited, key=lambda x: distances[x], reverse=True)
     return sort_distance_dict(distances), previous
 
 
