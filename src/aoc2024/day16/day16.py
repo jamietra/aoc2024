@@ -1,8 +1,9 @@
 import functools
 import math
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 from pathlib import Path
-from queue import PriorityQueue
+
+from graph_utils import dijkstra, sort_distance_dict
 
 type MazeNode = tuple[int, int, str]
 
@@ -40,45 +41,13 @@ def create_distance_dict(locations: list[MazeNode]) -> OrderedDict[MazeNode, flo
     return sort_distance_dict(distances)
 
 
-def sort_distance_dict(distances: OrderedDict[MazeNode, float]) -> OrderedDict[MazeNode, float]:
-    return OrderedDict(sorted(distances.items(), key=lambda x: x[-1], reverse=True))
-
-
-def dijkstra(
-    distances: OrderedDict[MazeNode, float]
-) -> tuple[OrderedDict[MazeNode, float], dict[MazeNode, set[MazeNode]]]:
-    """
-    Run Dijkstra's algorithm to create a distance mapping and previous mapping to reconstruct paths to end
-    """
-    unvisited_set = set(distances.keys())
-    unvisited: PriorityQueue[tuple[float, MazeNode]] = PriorityQueue()
-    for node, dist in distances.items():
-        unvisited.put((dist, node))
-    previous: defaultdict[MazeNode, set[MazeNode]] = defaultdict(set)
-    while True:
-        if not unvisited_set:
-            return sort_distance_dict(distances), previous
-        _, current_node = unvisited.get()
-        # Hack to deal with this priority queue not having an update method. If it's priority has been updated with
-        # alt_distance it will show up before the old entry in the queue and get removed from unvisited set, so we can
-        # skip safely skip and not worry about updating
-        if current_node not in unvisited_set:
-            continue
-        unvisited_set.remove(current_node)
-        current_distance = distances[current_node]
-        neighbours: dict[MazeNode, float] = {}
-        neighbours |= get_forward_backward_node(current_distance, current_node, unvisited_set)
-        neighbours |= get_rotation_neighbours(current_distance, current_node, unvisited_set)
-        for node, alt_distance in neighbours.items():
-            current_distance = distances[node]
-            if alt_distance <= current_distance:
-                distances[node] = min(distances[node], alt_distance)
-                if alt_distance < current_distance:
-                    previous[node] = {current_node}
-                    unvisited.put((alt_distance, node))
-                else:
-                    previous[node].add(current_node)
-    return sort_distance_dict(distances), previous
+def get_forward_and_rotational_neighbours(
+    current_distance: float, current_node: MazeNode, unvisited_set: set[MazeNode]
+) -> dict[MazeNode, float]:
+    neighbours: dict[MazeNode, float] = {}
+    neighbours |= get_forward_backward_node(current_distance, current_node, unvisited_set)
+    neighbours |= get_rotation_neighbours(current_distance, current_node, unvisited_set)
+    return neighbours
 
 
 def get_forward_backward_node(
@@ -142,7 +111,7 @@ def main() -> None:
     distances = create_distance_dict(locations)
     start = locations[0]
     start_correct_orientation = (start[0], start[1], ">")
-    solved, visited = dijkstra(distances)
+    solved, visited = dijkstra(distances, get_forward_and_rotational_neighbours)
     end = [(n, dist) for n, dist in solved.items() if n in ends][-1]
     print(end)
 
