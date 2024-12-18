@@ -1,4 +1,6 @@
+import asyncio
 import itertools
+from asyncio import Queue
 from collections import deque
 from pathlib import Path
 from typing import Callable
@@ -92,9 +94,9 @@ def run_program(ra_start: int, comp: Computer, program: Program) -> list[int]:
     comp.ra = deque([ra_start])
     comp.instruction_pointer = 0
     output = []
-
+    program_length = len(program)
     while True:
-        if comp.instruction_pointer >= len(program):
+        if comp.instruction_pointer >= program_length:
             break
         result = comp.run_instruction(program[comp.instruction_pointer], program[comp.instruction_pointer + 1])
         if result is not None:
@@ -128,7 +130,10 @@ def iterate(comp: Computer, program: Program) -> None:
             print(120 * "=")
 
 
-def brute_force(start: str, end_length: int, comp: Computer, program: Program, checked: set[int]) -> list[int] | None:
+async def brute_force(
+    start: str, end_length: int, comp: Computer, program: Program, checked: set[int]
+) -> list[int] | None:
+    results_queue: Queue[tuple[int, list[int]]] = Queue(maxsize=20)
     for i in tqdm(
         itertools.product(*[range(0, 8) for _ in range(end_length)]), total=8**end_length, desc=f"{end_length}"
     ):
@@ -137,10 +142,21 @@ def brute_force(start: str, end_length: int, comp: Computer, program: Program, c
         if test_value in checked:
             continue
         checked.add(test_value)
-        output = run_program(test_value, comp, program)
+        if not results_queue.full():
+            results_queue.put_nowait((test_value, run_program(test_value, comp, program)))
+            continue
+        real_val, output = await results_queue.get()
         if output == program:
             print(100 * "=")
-            print(test_value)
+            print(real_val)
+            print(output)
+            print(100 * "=")
+            return output
+    while not results_queue.empty():
+        real_val, output = await results_queue.get()
+        if output == program:
+            print(100 * "=")
+            print(real_val)
             print(output)
             print(100 * "=")
             return output
@@ -155,7 +171,7 @@ def main() -> None:
     start = "3045130136122400"
     checked: set[int] = set()
     for i in range(2, 16):
-        result = brute_force(start[:-i], i, comp, program, checked)
+        result = asyncio.run(brute_force(start[:-i], i, comp, program, checked))
         if result is not None:
             return
     # The correct answer in octal
