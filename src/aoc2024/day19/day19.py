@@ -17,7 +17,7 @@ def try_to_match(
         return memo_dict[desired]
     if desired == "":
         return 1
-    candidates = [x for x in available if x == desired[: len(x)]]
+    candidates = (x for x in available if x == desired[: len(x)])
     if not candidates:
         return 0
     memo_dict[desired] = accumulator(
