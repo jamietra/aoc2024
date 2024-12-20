@@ -2,6 +2,8 @@ from collections import OrderedDict, defaultdict
 from queue import PriorityQueue
 from typing import Callable
 
+type Coord = tuple[int, int]
+
 
 def dijkstra[
     NodeType
@@ -43,3 +45,26 @@ def dijkstra[
 
 def sort_distance_dict[NodeType](distances: OrderedDict[NodeType, float]) -> OrderedDict[NodeType, float]:
     return OrderedDict(sorted(distances.items(), key=lambda x: x[-1], reverse=True))
+
+
+def get_neighbours(
+    current_distance: float,
+    current_position: Coord,
+    unvisted_set: set[Coord],
+    obstacles: set[Coord],
+    max_row: int,
+    max_col: int,
+) -> dict[Coord, float]:
+    current_row, current_col = current_position
+    # can't be botherd to be smarter at this point
+    possible_neighbours = [
+        (current_row + 1, current_col),
+        (current_row - 1, current_col),
+        (current_row, current_col + 1),
+        (current_row, current_col - 1),
+    ]
+    return {
+        x: current_distance + 1
+        for x in possible_neighbours
+        if x not in obstacles and x in unvisted_set and x[0] in range(max_row + 1) and x[1] in range(max_col + 1)
+    }

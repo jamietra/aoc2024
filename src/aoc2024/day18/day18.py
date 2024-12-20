@@ -5,7 +5,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from pathlib import Path
 
-from graph_utils import dijkstra
+from graph_utils import dijkstra, get_neighbours
 
 type Coord = tuple[int, int]
 
@@ -16,32 +16,9 @@ def get_bytes(path: Path) -> list[Coord]:
     return list(map(lambda x: (int((coords := x.strip("()").split(","))[1]), int(coords[0])), lines))
 
 
-def get_neighbours(
-    current_distance: float,
-    current_position: Coord,
-    unvisted_set: set[Coord],
-    placed_bytes: set[Coord],
-    max_row: int,
-    max_col: int,
-) -> dict[Coord, float]:
-    current_row, current_col = current_position
-    # can't be botherd to be smarter at this point
-    possible_neighbours = [
-        (current_row + 1, current_col),
-        (current_row - 1, current_col),
-        (current_row, current_col + 1),
-        (current_row, current_col - 1),
-    ]
-    return {
-        x: current_distance + 1
-        for x in possible_neighbours
-        if x not in placed_bytes and x in unvisted_set and x[0] in range(max_row + 1) and x[1] in range(max_col + 1)
-    }
-
-
 def can_escape(distances: OrderedDict[Coord, float], byte_list: list[Coord], max_row: int, max_col: int) -> bool:
     distances, _ = dijkstra(
-        distances, functools.partial(get_neighbours, placed_bytes=set(byte_list), max_row=max_row, max_col=max_col)
+        distances, functools.partial(get_neighbours, obstacles=set(byte_list), max_row=max_row, max_col=max_col)
     )
     return math.isfinite(distances[(max_row, max_col)])
 
@@ -77,7 +54,7 @@ def main() -> None:
     distances[(0, 0)] = 0
     solved_dists, _ = dijkstra(
         deepcopy(distances),
-        functools.partial(get_neighbours, placed_bytes=placed_bytes, max_row=max_row, max_col=max_col),
+        functools.partial(get_neighbours, obstacles=placed_bytes, max_row=max_row, max_col=max_col),
     )
     print(solved_dists[(70, 70)])
     first_byte_count = binary_search(distances, len(byte_queue), 1024, byte_queue, max_row, max_col)
