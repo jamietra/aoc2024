@@ -1,3 +1,3 @@
-from .dijkstra import dijkstra, sort_distance_dict
+from .dijkstra import dijkstra, get_neighbours, sort_distance_dict
 
-__all__ = ["dijkstra", "sort_distance_dict"]
+__all__ = ["dijkstra", "sort_distance_dict", "get_neighbours"]
