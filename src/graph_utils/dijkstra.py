@@ -5,9 +5,7 @@ from typing import Callable
 type Coord = tuple[int, int]
 
 
-def dijkstra[
-    NodeType
-](
+def dijkstra[NodeType](
     distances: OrderedDict[NodeType, float],
     neighbour_getter: Callable[[float, NodeType, set[NodeType]], dict[NodeType, float]],
 ) -> tuple[OrderedDict[NodeType, float], dict[NodeType, set[NodeType]]]:
